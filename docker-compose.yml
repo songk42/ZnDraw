@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  zndraw:
+    image: pythonf/zndraw:latest
+    command: --no-standalone /mols/file.xyz --simgen
+    volumes:
+      - /Users/songk/ZnDraw/mols:/mols
+    restart: unless-stopped
+    ports:
+      - 5003:5003
+    depends_on:
+      - redis
+      - worker
+    environment:
+      - FLASK_STORAGE=redis://redis:6379/0
+      - FLASK_AUTH_TOKEN=super-secret-token
+
+  worker:
+    image: pythonf/zndraw:latest
+    entrypoint: celery -A zndraw.make_celery worker --loglevel=info -P eventlet
+    volumes:
+      - /Users/songk/ZnDraw/mols:/mols
+    restart: unless-stopped
+    depends_on:
+      - redis
+    environment:
+      - FLASK_STORAGE=redis://redis:6379/0
+      - FLASK_SERVER_URL="http://zndraw:5003"
+      - FLASK_AUTH_TOKEN=super-secret-token
+
+  redis:
+    image: redis:latest
+    restart: always
+    environment:
+      - REDIS_PORT=6379
+  
+volumes:
+  mols:
+    external: true
