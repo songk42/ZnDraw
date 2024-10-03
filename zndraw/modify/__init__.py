@@ -7,7 +7,7 @@ import typing as t
 import ase
 import numpy as np
 from ase.data import chemical_symbols
-from pydantic import Field
+from pydantic import Field, computed_field
 
 from zndraw.base import Extension, MethodsCollection
 
@@ -17,8 +17,8 @@ except ImportError:
     # mdanalysis is not installed
     pass
 
-if t.TYPE_CHECKING:
-    from zndraw.zndraw import ZnDraw
+# if t.TYPE_CHECKING:
+from zndraw.zndraw import ZnDraw
 
 
 log = logging.getLogger("zndraw")
@@ -345,6 +345,116 @@ class RemoveAtoms(UpdateScene):
         del vis[vis.step]
 
 
+class RunType(UpdateScene, arbitrary_types_allowed=True):
+    discriminator: str = Field(..., description="Type of run to perform.")
+    max_steps: int = Field(50, ge=1)
+    request: str = Field(..., description="Request to send to server.")
+
+    # def get_endpoint(self):
+    #     if self.discriminator == "Generate":
+    #         return generate
+    #     elif self.discriminator == "Hydrogenate":
+    #         return hydrogenate
+    #     elif self.discriminator == "Relax":
+    #         return relax
+    #     else:
+    #         raise ValueError(f"Unknown run type {self.discriminator}")
+
+    def run(
+        self,
+        vis: ZnDraw,
+        client_address: str,
+        calculators: dict,
+        timeout: float,
+        remove_isolated_atoms: bool = True,
+    ) -> ase.Atoms:
+        pass
+        # vis.log(f"Running {self.discriminator}")
+        # logging.debug(f"Reached {self.discriminator} run method")
+        # run_settings = format_run_settings(
+        #     vis,
+        #     run_type=self.discriminator.lower(),
+        #     max_steps=self.max_steps,
+        #     timeout=timeout,
+        # )
+        # if run_settings.atoms is None or len(run_settings.atoms) == 0:
+        #     vis.log(f"No atoms to {self.discriminator.lower()}")
+        #     return
+        # logging.debug("Formated run settings; vis.atoms was accessed")
+        # generation_calc = calculators.get("generation", None)
+        # if generation_calc is None:
+        #     vis.log("No loaded generation model, will try posting remote request")
+        #     json_request = settings_to_json(run_settings)
+        #     response = _post_request(
+        #         client_address, json_data_str=json_request, name=self.request
+        #     )
+        #     modified_atoms = [
+        #         atoms_from_json(atoms_json) for atoms_json in response.json()["atoms"]
+        #     ]
+        # else:
+        #     logging.debug(f"Calling {self.discriminator.lower()} function")
+        #     modified_atoms, _ = self.get_endpoint()(run_settings, self.calculators)
+        # logging.debug(f"{self.discriminator} function returned, adding atoms to vis")
+        # if remove_isolated_atoms:
+        #     modified_atoms.append(
+        #         remove_isolated_atoms_using_covalent_radii(modified_atoms[-1])
+        #     )
+        # else:
+        #     modified_atoms.append(modified_atoms[-1])
+        # vis.extend(modified_atoms)
+        # vis.log(f"Received back {len(modified_atoms)} atoms.")
+        # return modified_atoms[-1]
+
+
+class Model(UpdateScene, arbitrary_types_allowed=True):
+    """
+    Click on `run type` to select the type of run to perform.\n
+    The usual workflow is to first generate a structure, then hydrogenate it, and finally relax it.
+    """
+
+    discriminator: str
+    # calculator_dict: dict | None = None
+    client_address: str | None = None
+    run_type: RunType = Field(discriminator="discriminator")
+
+    # @computed_field
+    # @property
+    # def calculators(self) -> dict | None:
+    #     return self.calculator_dict
+
+    def run(self, vis: ZnDraw, **kwargs) -> None:
+        logging.debug("-" * 72)
+        vis.log("Sending request to inference server.")
+        logging.debug(f"Vis token: {vis.token}")
+        logging.debug("Accessing vis and vis.step for the first time")
+        if len(vis) > vis.step + 1:
+            del vis[vis.step + 1 :]
+        if kwargs["calculators"] is None:
+            raise ValueError("No calculators provided")
+        logging.debug("Accessing vis.bookmarks")
+        vis.bookmarks = vis.bookmarks | {
+            vis.step: f"Running {self.run_type.discriminator}"
+        }
+        timeout = kwargs.get("timeout", 60)
+        self.run_type.run(
+            vis=vis,
+            client_address=self.client_address,
+            calculators=kwargs["calculators"],
+            timeout=timeout,
+        )
+        logging.debug("-" * 72)
+
+
+class DiffusionModelling(Model):
+    """
+    Click on `run type` to select the type of run to perform.\n
+    The usual workflow is to first generate a structure, then hydrogenate it, and finally relax it.
+    """
+
+    discriminator: str = "DiffusionModelling"
+    client_address: str = "http://127.0.0.1:5000/run"
+
+
 methods = t.Union[
     Delete,
     Rotate,
@@ -358,6 +468,7 @@ methods = t.Union[
     Connect,
     NewCanvas,
     RemoveAtoms,
+    Model,
 ]
 
 

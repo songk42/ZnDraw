@@ -130,6 +130,7 @@ def main(
 
     Visualize Trajectories, Structures, and more in ZnDraw.
     """
+    print("[SK] Starting server...")
     if token is not None and url is None:
         raise ValueError("You need to provide a URL to use the token feature.")
     if url is not None and port is not None:

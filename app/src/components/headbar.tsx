@@ -256,7 +256,7 @@ function SiMGenButtons({ queuePosition }: { queuePosition: number }) {
 
   const runGenerate = () => {
     socket.emit("modifier:run", {
-      method: { discriminator: "SiMGenDemo" },
+      method: { discriminator: "Model" },
     });
   };
 
@@ -278,7 +278,7 @@ function SiMGenButtons({ queuePosition }: { queuePosition: number }) {
           <TbPlugConnected /> Connect
         </Button>
       </BtnTooltip>
-      <BtnTooltip text="Run SiMGen molecular generation">
+      <BtnTooltip text="Run molecular generation">
         <Button
           variant="success"
           className="mx-1"
@@ -435,7 +435,7 @@ const HeadBar = ({
                 <Button
                   className="px-0 py-0 btn-lg"
                   variant="tertiary"
-                  href="https://github.com/zincware/zndraw"
+                  href="https://github.com/RokasEl/simgen"
                   target="_blank"
                 >
                   SiMGen
