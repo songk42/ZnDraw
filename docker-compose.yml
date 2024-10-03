@@ -1,8 +1,9 @@
-version: "3.9"
-
 services:
   zndraw:
-    image: pythonf/zndraw:latest
+    build: &build_def
+        context: ./
+        dockerfile: Dockerfile
+    # image: songk/zndraw:latest
     command: --no-standalone /mols/file.xyz --simgen
     volumes:
       - /Users/songk/ZnDraw/mols:/mols
@@ -17,7 +18,8 @@ services:
       - FLASK_AUTH_TOKEN=super-secret-token
 
   worker:
-    image: pythonf/zndraw:latest
+    build: *build_def
+    # image: songk/zndraw:latest
     entrypoint: celery -A zndraw.make_celery worker --loglevel=info -P eventlet
     volumes:
       - /Users/songk/ZnDraw/mols:/mols

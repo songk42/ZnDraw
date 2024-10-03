@@ -341,7 +341,7 @@ def init_socketio_events(io: SocketIO):
 
         emit("room:modifier:queue", queue_position, to=room)
 
-        clients: set[str] = public | privat
+        clients: set[str] = set(public) | set(privat)
         if len(clients):
             for sid in clients:
                 # kindly ask every client if they are available
